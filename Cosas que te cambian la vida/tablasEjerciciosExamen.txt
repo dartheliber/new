@@ -1,0 +1,104 @@
+CREATE TABLE jobs
+    ( job_id         VARCHAR2(10)
+    , job_title      VARCHAR2(35)
+    CONSTRAINT     job_title_nn  NOT NULL
+    , min_salary     NUMBER(6)
+    , max_salary     NUMBER(6)
+    ) ;
+
+CREATE UNIQUE INDEX job_id_pk 
+ON jobs (job_id) ;
+
+ALTER TABLE jobs
+ADD ( CONSTRAINT job_id_pk
+               PRIMARY KEY(job_id)
+    ) ;
+CREATE TABLE employees
+    ( employee_id    NUMBER(6)
+    , first_name     VARCHAR2(20)
+    , last_name      VARCHAR2(25)
+     CONSTRAINT     emp_last_name_nn  NOT NULL
+    , email          VARCHAR2(25)
+    CONSTRAINT     emp_email_nn  NOT NULL
+    , phone_number   VARCHAR2(20)
+    , hire_date      DATE
+    CONSTRAINT     emp_hire_date_nn  NOT NULL
+    , job_id         VARCHAR2(10)
+    CONSTRAINT     emp_job_nn  NOT NULL
+    , salary         NUMBER(8,2)
+    , commission_pct NUMBER(2,2)
+    , manager_id     NUMBER(6)
+    , department_id  NUMBER(4)
+    , CONSTRAINT     emp_salary_min
+                     CHECK (salary > 0) 
+    , CONSTRAINT     emp_email_uk
+                     UNIQUE (email)
+    ) ;
+
+CREATE UNIQUE INDEX emp_emp_id_pk
+ON employees (employee_id) ;
+
+
+ALTER TABLE employees
+ADD ( CONSTRAINT     emp_emp_id_pk
+                     PRIMARY KEY (employee_id)
+    , CONSTRAINT     emp_job_fk
+                     FOREIGN KEY (job_id)
+                      REFERENCES jobs (job_id)
+    , CONSTRAINT     emp_manager_fk
+                     FOREIGN KEY (manager_id)
+                      REFERENCES employees
+    ) ;
+
+CREATE TABLE job_history
+    ( employee_id   NUMBER(6)
+     CONSTRAINT    jhist_employee_nn  NOT NULL
+    , start_date    DATE
+    CONSTRAINT    jhist_start_date_nn  NOT NULL
+    , end_date      DATE
+    CONSTRAINT    jhist_end_date_nn  NOT NULL
+    , job_id        VARCHAR2(10)
+    CONSTRAINT    jhist_job_nn  NOT NULL
+    , department_id NUMBER(4)
+    , CONSTRAINT    jhist_date_interval
+                    CHECK (end_date > start_date)
+    ) ;
+
+CREATE UNIQUE INDEX jhist_emp_id_st_date_pk 
+ON job_history (employee_id, start_date) ;
+
+ALTER TABLE job_history
+ADD ( CONSTRAINT jhist_emp_id_st_date_pk
+      PRIMARY KEY (employee_id, start_date)
+    , CONSTRAINT     jhist_job_fk
+                     FOREIGN KEY (job_id)
+                     REFERENCES jobs
+    , CONSTRAINT     jhist_emp_fk
+                     FOREIGN KEY (employee_id)
+                     REFERENCES employees
+
+    ) ;
+    
+    INSERT INTO job_history
+VALUES (102
+       , TO_DATE('13-JAN-1993', 'dd-MON-yyyy')
+       , TO_DATE('24-JUL-1998', 'dd-MON-yyyy')
+       , 'IT_PROG'
+       , 60);
+
+INSERT INTO job_history
+VALUES (101
+       , TO_DATE('21-SEP-1989', 'dd-MON-yyyy')
+       , TO_DATE('27-OCT-1993', 'dd-MON-yyyy')
+       , 'AC_ACCOUNT'
+       , 110);
+
+INSERT INTO job_history
+VALUES (101
+       , TO_DATE('28-OCT-1993', 'dd-MON-yyyy')
+       , TO_DATE('15-MAR-1997', 'dd-MON-yyyy')
+       , 'AC_MGR'
+       , 110);
+
+SELECT *
+FROM TACCCA025_APERTURAS;

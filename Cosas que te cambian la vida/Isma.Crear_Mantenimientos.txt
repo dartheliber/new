@@ -1,0 +1,367 @@
+Create Or Replace Procedure  Isma.Crear_Mantenimientos
+    (pa_Nom_Esquema In  Varchar2,
+     pa_Nom_Tabla        In  Varchar2,
+     Pa_Code_Error    Out   Pls_Integer,
+     Pa_Msg_Error       Out Varchar2)
+     
+Is
+    vl_Campos_PK Clob := '';
+
+    vl_Campos        Clob := '';
+    vl_Campos_Pa Clob := '';
+
+    vl_SQL                Clob;
+
+    
+    vl_Pkg_Header Clob;
+    vl_Pkg_Header_Insrt Clob;
+    vl_Pkg_Header_Upd Clob;
+    vl_Pkg_Header_Del  Clob;
+    vl_Pkg_Header_Sel   Clob;
+    
+    
+    vl_Pkg_Body          Clob;
+    vl_Pkg_Body_Insrt Clob;
+    vl_Pkg_Body_Upd Clob;
+    vl_Pkg_Body_Del  Clob;
+    vl_Pkg_Body_Sel   Clob;
+    
+    Err_SinPK   Exception;
+    
+
+Begin
+
+
+-- Recuperar llaves primaria
+
+        For a In (Select Initcap(b.Column_Name) As Column_Name
+                        From   All_Constraints a
+                        Inner Join All_Cons_Columns b
+                            On  a. Owner = b.Owner
+                            And a. Table_Name = b.Table_Name
+                            And a. Constraint_Name = b.Constraint_Name
+                        Where a.Owner             = pa_Nom_Esquema
+                        And     a. Table_Name   = pa_Nom_Tabla
+                        And     a.Constraint_Type = 'P')
+        Loop
+        
+            vl_Campos_PK :=  vl_Campos_PK || a.Column_Name || ',';
+        
+        End Loop;
+
+        vl_Campos_PK       := Initcap(Substr(vl_Campos_PK,1, Length(vl_Campos_PK) - 1));
+        
+        
+      
+                
+        If Length(Rtrim(Ltrim(vl_Campos_PK))) is null Then
+            Raise  Err_SinPK;
+        End If;
+            
+
+-- Recuperar campos separados por coma y para parametros
+        For a in ( Select Column_Name
+                        From    All_Tab_Columns
+                        Where Owner             = pa_Nom_Esquema
+                        And      Table_Name   = pa_Nom_Tabla
+                        Order by Column_Id)
+        Loop
+        
+            vl_Campos        :=  vl_Campos || a.Column_Name || ',';
+              
+            vl_Campos_Pa :=  vl_Campos_Pa || 'Pa_' || a.Column_Name || ',';
+        
+        End Loop;
+        
+        
+        vl_Campos       := Initcap(Substr(vl_Campos,1, Length(vl_Campos) - 1));
+        
+        vl_Campos_Pa := Initcap(Substr(vl_Campos_Pa,1, Length(vl_Campos_Pa) - 1));
+        
+        
+
+-- Encabezado Paquete
+
+
+           vl_Pkg_Header          :=  ' Create Or Replace Package ' ||  pa_Nom_Esquema || '.' || 'Pkg_Mant_' || Initcap(Substr(Rtrim(Ltrim(pa_Nom_Tabla)),1,6)) || Chr(13) || 'As' || Chr(13);
+
+-- Encabezado SP Select
+            
+           vl_Pkg_Header_Sel   := ' Procedure SP_Select_' || Initcap(Substr(Rtrim(Ltrim(pa_Nom_Tabla)),1,6)) ||  Chr(13) || Chr(9) ||
+                                                     ' (Pa_Cur_Datos    Out    Sys_RefCursor,' ||  Chr(13) || Chr(9) ||
+                                                     '  Pa_Code_Error   Out    Pls_Integer,'     ||  Chr(13) || Chr(9) ||
+                                                     '  Pa_Msg_Error    Out Varchar2);'           ||  Chr(13)  || Chr(13);
+
+-- Encabezado SP Insert
+
+          vl_Pkg_Header_Insrt := ' Procedure SP_Insert_' || Initcap(Substr(Rtrim(Ltrim(pa_Nom_Tabla)),1,6)) ||  Chr(13) || Chr(9) || '(' ;
+          
+          
+          For a  in  (Select Initcap(Column_Name) As Column_Name
+                           From    All_Tab_Columns
+                           Where Owner             = pa_Nom_Esquema
+                           And      Table_Name   = pa_Nom_Tabla)
+          Loop
+          
+            vl_Pkg_Header_Insrt := vl_Pkg_Header_Insrt || 'Pa_' || a.Column_Name    || ' In ' || pa_Nom_Esquema || '.' || pa_Nom_Tabla || '.' || a.Column_Name || '%Type,' || Chr(13) || Chr(9) ;
+          
+          End Loop;
+          
+         vl_Pkg_Header_Insrt := vl_Pkg_Header_Insrt || ' Pa_Code_Error Out    Pls_Integer, ' || Chr(13) || Chr(9) ||
+                                                                                                ' Pa_Msg_Error    Out Varchar2); '     || Chr(13) || Chr(13);  
+          
+-- Encabezado SP Update
+        
+         vl_Pkg_Header_Upd := ' Procedure SP_Update_' || Initcap(Substr(Rtrim(Ltrim(pa_Nom_Tabla)),1,6)) ||  Chr(13) || Chr(9) || '(' ;
+          
+          
+          For a  in  (Select Initcap(Column_Name) As Column_Name
+                              From    All_Tab_Columns
+                               Where Owner             = pa_Nom_Esquema
+                               And      Table_Name   = pa_Nom_Tabla)
+          Loop
+          
+            vl_Pkg_Header_Upd := vl_Pkg_Header_Upd || 'Pa_' || a.Column_Name    || ' In ' || pa_Nom_Esquema || '.' || pa_Nom_Tabla || '.' || a.Column_Name || '%Type,' || Chr(13) || Chr(9);
+          
+          End Loop;
+          
+         vl_Pkg_Header_Upd := vl_Pkg_Header_Upd || ' Pa_Code_Error Out    Pls_Integer, ' || Chr(13) || Chr(9) ||
+                                                                                                 ' Pa_Msg_Error    Out Varchar2); '     || Chr(13) || Chr(13);  
+                                           
+           
+-- Encabezado SP Delete          
+          
+         vl_Pkg_Header_Del := ' Procedure SP_Delete_' || Initcap(Substr(Rtrim(Ltrim(pa_Nom_Tabla)),1,6)) ||  Chr(13) || Chr(9) || '(' ;                           
+           
+         For a In (Select Initcap(b.Column_Name) As Column_Name
+                        From   All_Constraints a
+                        Inner Join All_Cons_Columns b
+                            On  a. Owner = b.Owner
+                            And a. Table_Name = b.Table_Name
+                            And a. Constraint_Name = b.Constraint_Name
+                        Where a.Owner             = pa_Nom_Esquema
+                        And     a. Table_Name   = pa_Nom_Tabla
+                        And     a.Constraint_Type = 'P')
+        Loop
+        
+            vl_Pkg_Header_Del := vl_Pkg_Header_Del || 'Pa_' || a.Column_Name    || ' In ' || pa_Nom_Esquema || '.' || pa_Nom_Tabla || '.' || a.Column_Name || '%Type,' || Chr(13) || Chr(9) ;
+        
+        End Loop;
+        
+                  
+        vl_Pkg_Header_Del := vl_Pkg_Header_Del || ' Pa_Code_Error Out    Pls_Integer, ' || Chr(13) || Chr(9) ||
+                                                                                            ' Pa_Msg_Error    Out Varchar2); '     || Chr(13) || Chr(13);           
+                                                                                            
+
+-- Encabezado Paquete 
+                                                                                            
+         vl_Pkg_Header := vl_Pkg_Header ||  vl_Pkg_Header_Sel || vl_Pkg_Header_Insrt || vl_Pkg_Header_Upd || vl_Pkg_Header_Del;
+         
+         vl_Pkg_Header := vl_Pkg_Header || 'End ' || 'Pkg_Mant_' || Initcap(Substr(Rtrim(Ltrim(pa_Nom_Tabla)),1,6)) || ';' || Chr(13) || Chr(13) || Chr(13) || Chr(13);  
+        
+        
+        
+        
+
+-- Cuerpo Paquete
+
+        vl_Pkg_Body := ' Create Or Replace Package Body ' ||  pa_Nom_Esquema || '.' || 'Pkg_Mant_' || Initcap(Substr(Rtrim(Ltrim(pa_Nom_Tabla)),1,6)) || Chr(13) || 'As' || Chr(13) || Chr(13); 
+                
+
+-- Cuerpo SP Select
+   
+        vl_Pkg_Body_Sel  :=  Replace(vl_Pkg_Header_Sel, ';', '') ;
+         vl_Pkg_Body_Sel := vl_Pkg_Body_Sel ||    ' As'   || Chr(13) ||
+                                            ' Begin'  || Chr(13) || Chr(13) || Chr(9) ||
+                                            ' Open  Pa_Cur_Datos For '  || Chr(13) || Chr(9) || Chr(9) ||
+                                            ' Select ' ||vl_Campos         || Chr(13) || Chr(9) || Chr(9) ||
+                                            ' From '   ||pa_Nom_Esquema || '.' || pa_Nom_Tabla ||  Chr(13) || Chr(9) || Chr(9) ||
+                                            ' Order by ' || vl_Campos_PK || ';' ;
+        
+        vl_Pkg_Body_Sel :=  vl_Pkg_Body_Sel || Chr(13) || Chr(13) || Chr(9) ||
+                                             ' Pa_Code_Error := 0; ';
+                                             
+        vl_Pkg_Body_Sel :=  vl_Pkg_Body_Sel                        || Chr(13) || Chr(13) ||Chr(9) ||
+                                            ' Exception '                                 || Chr(13) || Chr(9) || Chr(9) ||  
+                                            ' When Others Then '                  || Chr(13) || Chr(9) || Chr(9) ||Chr(9) ||
+                                            ' Pa_Code_Error := SqlCode; '  || Chr(13) || Chr(9) || Chr(9) ||Chr(9) ||
+                                            ' Pa_Msg_Error  := ' || '''' || 'Pkg_Mant_' || Initcap(Substr(Rtrim(Ltrim(pa_Nom_Tabla)),1,6)) || '.' || 'SP_Select_' || Initcap(Substr(Rtrim(Ltrim(pa_Nom_Tabla)),1,6)) || '''' || ' || SqlErrm; ';
+                                            
+        vl_Pkg_Body_Sel := vl_Pkg_Body_Sel  || Chr(13) || Chr(13) ||
+                                            ' End SP_Select_' || Initcap(Substr(Rtrim(Ltrim(pa_Nom_Tabla)),1,6)) || ';' ||
+                                            Chr(13) || Chr(13) || Chr(13);
+        
+        
+        
+-- Cuerpo SP Insert        
+        
+        vl_Pkg_Body_Insrt  :=  Replace(vl_Pkg_Header_Insrt, ';', '') ;
+        
+        vl_Pkg_Body_Insrt  := vl_Pkg_Body_Insrt   ||    ' As'   || Chr(13) ||
+                                               ' Begin'          || Chr(13)  || Chr(13) || Chr(9) ||
+                                               ' Insert Into ' ||pa_Nom_Esquema || '.' || pa_Nom_Tabla || ' (' || vl_Campos || ')' || Chr(13)  || Chr(9) ||
+                                               ' Values      '  || ' (' || vl_Campos_Pa || ');' ;
+        
+        vl_Pkg_Body_Insrt  := vl_Pkg_Body_Insrt || Chr(13) || Chr(13) || Chr(9) ||
+                                              ' Pa_Code_Error := 0; ';
+        
+        vl_Pkg_Body_Insrt  := vl_Pkg_Body_Insrt || Chr(13) || Chr(13) || Chr(9) ||
+                                              ' Commit; ';
+                                              
+        vl_Pkg_Body_Insrt :=  vl_Pkg_Body_Insrt                        || Chr(13) || Chr(13) ||
+                                            ' Exception '                                 || Chr(13) || Chr(9) || Chr(9) || 
+                                            ' When Others Then '                  || Chr(13) || Chr(9) || Chr(9) || Chr(9) ||
+                                            ' Rollback;'                                   || Chr(13) || Chr(9) || Chr(9) || Chr(9) ||
+                                            ' Pa_Code_Error := SqlCode; '  || Chr(13) || Chr(9) || Chr(9) || Chr(9) ||
+                                            ' Pa_Msg_Error  := ' || '''' || 'Pkg_Mant_' || Initcap(Substr(Rtrim(Ltrim(pa_Nom_Tabla)),1,6)) || '.' || 'SP_Insert_' || Initcap(Substr(Rtrim(Ltrim(pa_Nom_Tabla)),1,6)) || '''' || ' || SqlErrm; ';
+                                            
+        vl_Pkg_Body_Insrt := vl_Pkg_Body_Insrt  || Chr(13) || Chr(13) ||
+                                            ' End SP_Insert_' || Initcap(Substr(Rtrim(Ltrim(pa_Nom_Tabla)),1,6)) || ';' ||
+                                            Chr(13) || Chr(13) || Chr(13);
+        
+       
+               
+-- Cuerpo SP Update                
+        
+        vl_Pkg_Body_Upd  :=  Replace(vl_Pkg_Header_Upd, ';', '') ;
+        
+        vl_Pkg_Body_Upd  := vl_Pkg_Body_Upd   ||    ' As'   || Chr(13) ||
+                                               ' Begin'          || Chr(13)  || Chr(13) || Chr(9) ||      
+                                               ' Update ' ||pa_Nom_Esquema || '.' || pa_Nom_Tabla || 
+                                               ' Set ';
+                                               
+         
+        For a in (Select Initcap(Column_Name) as Column_Name
+                       From    All_Tab_Columns
+                       Where Owner             = pa_Nom_Esquema
+                       And      Table_Name   = pa_Nom_Tabla
+                       And      Column_Name not in (Select b.Column_Name
+                                                                        From   All_Constraints a
+                                                                        Inner Join All_Cons_Columns b
+                                                                            On  a. Owner = b.Owner
+																			And a. Table_Name = b.Table_Name
+																			And a. Constraint_Name = b.Constraint_Name
+                                                                        Where a.Owner             = pa_Nom_Esquema
+                                                                        And     a. Table_Name   = pa_Nom_Tabla
+                                                                        And     a.Constraint_Type = 'P'))
+        Loop
+        
+                vl_Pkg_Body_Upd := vl_Pkg_Body_Upd || Chr(13) || Chr(9) || Chr(9) || Chr(9) || Chr(9) || Chr(9) || Chr(9) ||a.Column_Name || ' = ' || 'Pa_' || a.Column_Name || ', ';
+        
+        End Loop;
+        
+        vl_Pkg_Body_Upd := Substr(vl_Pkg_Body_Upd, 1, Length(Rtrim(Ltrim(vl_Pkg_Body_Upd)))) || Chr(13)  || Chr(9) || ' Where '; 
+        
+        
+        For a in (Select Initcap(b.Column_Name) as Column_Name, Rownum as Conteo
+                        From   All_Constraints a
+                        Inner Join All_Cons_Columns b
+                            On  a. Owner = b.Owner
+                            And a. Table_Name = b.Table_Name
+                            And a. Constraint_Name = b.Constraint_Name
+                        Where a.Owner             = pa_Nom_Esquema
+                        And     a. Table_Name   = pa_Nom_Tabla
+                        And     a.Constraint_Type = 'P')
+        Loop
+        
+            If a.Conteo = 1 Then
+                vl_Pkg_Body_Upd := vl_Pkg_Body_Upd || a.Column_Name || ' = ' || 'Pa_' || a.Column_Name || Chr(13) || Chr(9);
+            Else
+                vl_Pkg_Body_Upd := vl_Pkg_Body_Upd || ' And '  || a.Column_Name || ' = ' || 'Pa_' || a.Column_Name || Chr(13) || Chr(9);             
+            End If;
+           
+        End Loop;
+        
+        vl_Pkg_Body_Upd := vl_Pkg_Body_Upd || ';' ; 
+        
+        vl_Pkg_Body_Upd  := vl_Pkg_Body_Upd || Chr(13) || Chr(13) || Chr(9) ||
+                                              ' Pa_Code_Error := 0; ';
+        
+        vl_Pkg_Body_Upd  := vl_Pkg_Body_Upd || Chr(13) || Chr(13) || Chr(9) ||
+                                              ' Commit; ';
+                                              
+        vl_Pkg_Body_Upd :=  vl_Pkg_Body_Upd                        || Chr(13) || Chr(13) ||
+                                            ' Exception '                                 || Chr(13) || Chr(9) || Chr(9) || 
+                                            ' When Others Then '                  || Chr(13) || Chr(9) || Chr(9) || Chr(9) ||
+                                            ' Rollback;'                                   || Chr(13) || Chr(9) || Chr(9) || Chr(9) ||
+                                            ' Pa_Code_Error := SqlCode; '  || Chr(13) || Chr(9) || Chr(9) || Chr(9) ||
+                                            ' Pa_Msg_Error  := ' || '''' || 'Pkg_Mant_' || Initcap(Substr(Rtrim(Ltrim(pa_Nom_Tabla)),1,6)) || '.' || 'SP_Update_' || Initcap(Substr(Rtrim(Ltrim(pa_Nom_Tabla)),1,6)) || '''' || ' || SqlErrm; ';
+                                            
+        vl_Pkg_Body_Upd := vl_Pkg_Body_Upd  || Chr(13) || Chr(13) ||
+                                            ' End SP_Update_' || Initcap(Substr(Rtrim(Ltrim(pa_Nom_Tabla)),1,6)) || ';' ||
+                                            Chr(13) || Chr(13) || Chr(13);
+        
+        
+        
+-- Cuerpo SP Update        
+        
+        vl_Pkg_Body_Del  :=  Replace(vl_Pkg_Header_Del, ';', '') ;
+        
+        vl_Pkg_Body_Del  := vl_Pkg_Body_Del   ||    ' As'   || Chr(13) ||
+                                              ' Begin'          || Chr(13)  || Chr(13) || Chr(9) ||      
+                                              ' Delete From ' ||pa_Nom_Esquema || '.' || pa_Nom_Tabla || Chr(13)  || Chr(9) || 
+                                              ' Where  ';        
+
+
+        For a in (Select Initcap(b.Column_Name) as Column_Name, Rownum as Conteo
+                        From   All_Constraints a
+                        Inner Join All_Cons_Columns b
+                            On  a. Owner = b.Owner
+                            And a. Table_Name = b.Table_Name
+                            And a. Constraint_Name = b.Constraint_Name
+                        Where a.Owner             = pa_Nom_Esquema
+                        And     a. Table_Name   = pa_Nom_Tabla
+                        And     a.Constraint_Type = 'P')
+        Loop
+        
+            If a.Conteo = 1 Then
+                vl_Pkg_Body_Del := vl_Pkg_Body_Del || a.Column_Name || ' = ' || 'Pa_' || a.Column_Name || Chr(13) || Chr(9);
+            Else
+                vl_Pkg_Body_Del := vl_Pkg_Body_Del || ' And '  || a.Column_Name || ' = ' || 'Pa_' || a.Column_Name || Chr(13) || Chr(9);             
+            End If;
+           
+        End Loop;
+        
+        
+        vl_Pkg_Body_Del := vl_Pkg_Body_Del || ';' ; 
+        
+        vl_Pkg_Body_Del  := vl_Pkg_Body_Del || Chr(13) || Chr(13) || Chr(9) ||
+                                              ' Pa_Code_Error := 0; ';
+        
+        vl_Pkg_Body_Del  := vl_Pkg_Body_Del || Chr(13) || Chr(13) || Chr(9) ||
+                                              ' Commit; ';
+                                              
+        vl_Pkg_Body_Del :=  vl_Pkg_Body_Del                        || Chr(13) || Chr(13) ||
+                                            ' Exception '                                 || Chr(13) || Chr(9) || Chr(9) || 
+                                            ' When Others Then '                  || Chr(13) || Chr(9) || Chr(9) || Chr(9) ||
+                                            ' Rollback;'                                   || Chr(13) || Chr(9) || Chr(9) || Chr(9) ||
+                                            ' Pa_Code_Error := SqlCode; '  || Chr(13) || Chr(9) || Chr(9) || Chr(9) ||
+                                            ' Pa_Msg_Error  := ' || '''' || 'Pkg_Mant_' || Initcap(Substr(Rtrim(Ltrim(pa_Nom_Tabla)),1,6)) || '.' || 'SP_Delete_' || Initcap(Substr(Rtrim(Ltrim(pa_Nom_Tabla)),1,6)) || '''' || ' || SqlErrm; ';
+                                            
+        vl_Pkg_Body_Del := vl_Pkg_Body_Del  || Chr(13) || Chr(13) ||
+                                            ' End SP_Delete_' || Initcap(Substr(Rtrim(Ltrim(pa_Nom_Tabla)),1,6)) || ';' ||
+                                            Chr(13) || Chr(13) || Chr(13);
+
+
+-- Cuerpo Paquete 
+                                                                                            
+         vl_Pkg_Body :=  vl_Pkg_Body || vl_Pkg_Body_Sel || vl_Pkg_Body_Insrt || vl_Pkg_Body_Upd || vl_Pkg_Body_Del;
+         
+         vl_Pkg_Body := vl_Pkg_Body || 'End ' || 'Pkg_Mant_' || Initcap(Substr(Rtrim(Ltrim(pa_Nom_Tabla)),1,6)) || ';' || Chr(13) || Chr(13) || Chr(13) || Chr(13);        
+        
+                
+        
+        vl_SQL := vl_Pkg_Header || vl_Pkg_Body;
+                                                              
+        dbms_output.put_line(vl_SQL);
+        
+        
+Exception
+    When Err_SinPK Then
+        Pa_Code_Error := SqlCode;
+        Pa_Msg_Error  := 'No se tiene llave primaria especificada para la tabla ' || pa_Nom_Esquema || '.' || pa_Nom_Tabla; 
+         
+        
+        
+End Crear_Mantenimientos;
+

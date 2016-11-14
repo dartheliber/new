@@ -1,0 +1,303 @@
+--Unicamente estr. 136
+--PASO 1 CREAR TABLA
+CREATE TABLE CECO.TACCNE26_TOTALPLAY (
+  FDFECHAPROCESO          DATE                  NOT NULL,
+  FIANIO                  NUMBER(4)             NOT NULL,
+  FISEMANA                NUMBER(2)             NOT NULL,
+  FCNCTROCTOSUC    VARCHAR2(15 BYTE)     NOT NULL,
+  FINSUCURSALCVE         NUMBER(5),
+  FCNOMBRE              VARCHAR2(100)         NOT NULL,
+  FISTATUS          VARCHAR2(15 CHAR)             NOT NULL,
+  FIIDENTIDAD             NUMBER(4)             NOT NULL,
+  FCNOMBREENTIDAD            VARCHAR2(100 BYTE)         NOT NULL,
+  FICFORMATOU            NUMBER(3)             NOT NULL,
+  FDFECHAPACT             DATE,
+  FDFECHACIERRE             DATE,
+  FCCOLOR            VARCHAR2(2 BYTE)             NOT NULL,
+  FIVICEPRESIDENCIAID     NUMBER(3)             NOT NULL,
+  FCVICEPRESIDENCIA       VARCHAR2(50 BYTE)     NOT NULL,
+  FIIDEXT1               NUMBER(4)             NOT NULL,
+  FCEXT1                 VARCHAR2(100 BYTE)    NOT NULL,
+  ULTIMA_MODIFICACION     DATE                  NOT NULL,
+  USUARIO_MODIFICO      VARCHAR2(30 BYTE)     NOT NULL
+  )
+TABLESPACE CECO_TEMP01_DAT
+PCTUSED    0
+PCTFREE    10
+INITRANS   1
+MAXTRANS   255
+STORAGE    (
+            INITIAL          64K
+            NEXT             1M
+            MINEXTENTS       1
+            MAXEXTENTS       UNLIMITED
+            PCTINCREASE      0
+            BUFFER_POOL      DEFAULT
+           )
+NOLOGGING 
+NOCOMPRESS 
+NOCACHE
+NOPARALLEL
+MONITORING;
+
+CREATE UNIQUE INDEX PK_TACCNE26 ON CECO.TACCNE26_TOTALPLAY
+( FIANIO, FISEMANA, FCNCTROCTOSUC, FIIDENTIDAD )
+NOLOGGING
+TABLESPACE CECO_TEMP01_DAT
+PCTFREE    10
+INITRANS   2
+MAXTRANS   255
+STORAGE    (
+            INITIAL          64K
+            NEXT             1M
+            MINEXTENTS       1
+            MAXEXTENTS       UNLIMITED
+            PCTINCREASE      0
+            BUFFER_POOL      DEFAULT
+           )
+NOPARALLEL;
+
+
+ALTER TABLE CECO.TACCNE26_TOTALPLAY ADD (
+  CONSTRAINT PK_TACCNE26
+  PRIMARY KEY
+  ( FIANIO, FISEMANA, FCNCTROCTOSUC, FIIDENTIDAD )
+  USING INDEX PK_TACCNE26);
+  
+--SELECT FDFECHAPROCESO, FIANIO, FISEMANA,FICCID_HIJO, FIESTRUCTURA, FCNOMBREESTRUCTURA, FIENTIDADID_HIJO
+--FROM CECO.TACCBA037_UNEST
+--WHERE FISEMANA = 42
+--AND FIESTRUCTURA = 15
+--AND FICCID_HIJO = 312001
+--ORDER BY FICCID_HIJO;
+
+SELECT FDFECHAPROCESO, FIANIO, FISEMANA,FCNCTROCTOSUC, FIIDENTIDAD, FCNOMBREENTIDAD
+FROM CECO.TACCBA035_UNPRI
+WHERE FISEMANA = 42
+AND FIIDENTIDAD = 13
+ORDER BY 4;
+
+--DELETE FROM CECO.TACCBA039_TOTALPLAY;
+
+ALTER TABLE CECO.TACCBA039_TOTALPLAY MODIFY (FDFECHAPACT NULL);
+
+COMMIT;
+
+--DROP TABLE CECO.TACCNE26_TOTALPLAY;
+
+---PASO 3 CREAR TABLA TEMPORAL PARA GUARDAR LOS CENTROS TP(PORQUE EN DESARROLLO NO SE TIENEN TODOS LOS CENTROS)
+CREATE TABLE CECO.TESTPRESD1 (
+  FCNCTROCTOSUC    VARCHAR2(15 BYTE)     NOT NULL,
+  FIIDENTIDAD             NUMBER(4)             NOT NULL,
+    FCNOMBRE              VARCHAR2(100)         NOT NULL,
+    FDFECHAPACT             DATE             ,
+  FIVICEPRESIDENCIAID     NUMBER(3)             NOT NULL,
+  FCVICEPRESIDENCIA       VARCHAR2(50 BYTE)     NOT NULL
+  )
+TABLESPACE CECO_TEMP01_DAT
+PCTUSED    0
+PCTFREE    10
+INITRANS   1
+MAXTRANS   255
+STORAGE    (
+            INITIAL          64K
+            NEXT             1M
+            MINEXTENTS       1
+            MAXEXTENTS       UNLIMITED
+            PCTINCREASE      0
+            BUFFER_POOL      DEFAULT
+           )
+NOLOGGING 
+NOCOMPRESS 
+NOCACHE
+NOPARALLEL
+MONITORING;
+
+--PASO 4 INSERTAR LOS DATOS OBTENIDOS DE LAS TABLAS DE BANDERA A LA NUEVA TABLA DE TOTAL PLAY ESTRUC. 136
+INSERT INTO CECO.TACCNE26_TOTALPLAY ( FDFECHAPROCESO
+                                                                    ,FIANIO
+                                                                    , FISEMANA
+                                                                    , FCNCTROCTOSUC
+                                                                    , FINSUCURSALCVE
+                                                                    , FCNOMBRE
+                                                                    , FISTATUS
+                                                                    , FIIDENTIDAD
+                                                                   ,FCNOMBREENTIDAD
+                                                                   , FICFORMATOU
+                                                                   , FDFECHAPACT
+                                                                   , FDFECHACIERRE
+                                                                   , FCCOLOR 
+                                                                   ,FIVICEPRESIDENCIAID
+                                                                   ,FCVICEPRESIDENCIA
+                                                                   ,FIIDEXT1
+                                                                   , FCEXT1
+                                                                   --,ULTIMA_MODIFICACION
+                                                                    );
+
+SELECT PRI.FDFECHAPROCESO, 
+              PRI.FIANIO, 
+              PRI.FISEMANA, 
+              EST.FICCID_HIJO, 
+              PRI.FINSUCURSALCVE, 
+              PRI.FCNOMBRE, 
+              PRI.FISTATUS, 
+              PRI.FIIDENTIDAD, 
+             PRI.FCNOMBREENTIDAD, 
+             PRI.FICFORMATOU, 
+             PRI.FDFECHAPACT, 
+             PRI.FDFECHACIERRE, 
+             PRI.FCCOLOR, 
+             PRES.FIVICEPRESIDENCIAID,
+             PRES.FCVICEPRESIDENCIA,
+             SEC.FIIDEXT1,
+             SEC.FCEXT1,
+             SYSDATE AS ULTIMA_MODIFICACION,
+             'CECO' AS USUARIO_MODIFICO 
+
+FROM CECO.TACCBA037_UNEST EST
+
+JOIN CECO.TACCBA035_UNPRI PRI
+ON (PRI.FCNCTROCTOSUC = EST.FICCID_HIJO
+AND PRI.FIIDENTIDAD = EST.FIENTIDADID_HIJO )
+
+JOIN CECO.TACCBA036_UNSEC SEC
+ON (PRI.FCNCTROCTOSUC = SEC.FCNCTROCTOSUC
+AND PRI.FIIDENTIDAD = SEC.FIIDENTIDAD )                                           
+
+JOIN CECO.TESTPRESD1 PRES
+ON (PRI.FCNCTROCTOSUC = PRES.FCNCTROCTOSUC
+AND PRI.FIIDENTIDAD = PRES.FIIDENTIDAD )     
+
+WHERE EST.FISEMANA = 42
+AND PRI.FDFECHAPROCESO = TO_DATE('18/10/2016', 'DD/MM/YYYY')
+AND SEC.FDFECHAPROCESO = TO_DATE('18/10/2016', 'DD/MM/YYYY')
+AND EST.FIESTRUCTURA = 15
+AND EST.FIENTIDADID_HIJO = 13;
+
+
+SELECT  TO_DATE('18/10/2016', 'DD/MM/YYYY')                          AS  FDFECHAPROCESO,      
+                                                                                   2016                                            AS FIANIO,      
+                                                                                   42                                      AS FISEMANA,        
+                                                                                   CC.FICCID                                         AS FCNCTROCTOSUC,        
+                                                                                   CC.FINUM_ECONOMICO                  AS FINSUCURSALCVE,         
+                                                                                   CC.FCNOMBRECC                            AS FCNOMBRE,            
+                                                                                   CC.FISTATUSCCID                            AS FISTATUS,
+                                                                                   ST.FCSTATUSCC                              AS FCSTATUS,             
+                                                                                   CC.FIENTIDADID                              AS FIIDENTIDAD,         
+                                                                                   CAST(CECO.FN1493_CONS_NOMENTIDAD(CC.FIENTIDADID) AS VARCHAR2(100))  
+                                                                                                                                            AS FCNOMBREENTIDAD,                                                                                  
+                                                                                   CC.FICANALID                                  AS FICFORMATOU,       
+                                                                                   CC.FDFECHA_APERTURA             AS FDFECHAPACT,     
+                                                                                   CC.FDFECHA_CIERRE                     AS FDFECHACIERRE,
+                                                                                   (SELECT C2.FIGUNCORPID FROM CECO.TACCOP001_CENTRO_COSTOS C2  WHERE CC.FICCID = C2.FICCID AND CC.FIENTIDADID = C2.FIENTIDADID)   
+                                                                                                                                            AS FIIDGUNCORP,          
+                                                                                   CAST(CECO.FN1736_NOMGUNCORP (CC.FICCID, CC.FIENTIDADID) AS VARCHAR2 (100))   
+                                                                                                                                            AS FCGUN_CORP,
+                                                                                   CU.FCTIPO                                       AS FCTIPOCANAL,                  
+                                                                                   CC.FCCOLORID                                AS FCCOLOR,
+                                                                                                CC.FIVICEPRESIDENCIAID,
+             CAST( CECO.FN1486_CONS_NOMVP( CC.FIVICEPRESIDENCIAID )    AS VARCHAR2(50 BYTE)  ) AS FCVICEPRESIDENCIA,
+                                                                                   '184783'                                    AS ULTIMA_MODIFICACION,     
+                                                                                   TO_DATE('18/10/2016', 'DD/MM/YYYY')                                         AS  USUARIO_MODIFICO                                                                      
+                                                                    FROM      CECO.TACCOP001_CENTRO_COSTOS    CC 
+                                                                    INNER JOIN CECO.TACCCA025_APERTURAS          AP                 ON  CC.FIAPERTURAS  = AP.FIAPERTURAS
+                                                                    INNER JOIN CECO.TACCCA005_STATUS_CC          ST                 ON ST.FISTATUSCCID = CC.FISTATUSCCID
+                                                                    INNER JOIN CECO.TACCCA015_VIRTUAL_REAL      TCV                 ON CC.FITIPOCC = TCV.FITIPOCC
+                                                                    INNER JOIN CECO.TACCOP004_DIRECCION            DI                  ON CC.FICCID =  DI.FICCID AND CC.FIENTIDADID = DI.FIENTIDADID
+                                                                    INNER JOIN CECO.TACCZO001_PAIS                     PA                 ON  PA.FIPAISID = DI.FIPAISID       AND PA.FIPAISID >=0
+                                                                    INNER JOIN  CECO.TACCUN002_CANAL_UNICO      CU                 ON   CU.FICANALID  =   CC.FICANALID
+                                                                    INNER JOIN CECO.TACCUN009_TIPOCANAL           TC                 ON CU.FCTIPO         =   TC.FCTIPO  
+                                                                    INNER JOIN CECO.TACCUN010_TIPSUC                 TS                 ON TC.FCTIPOSUCURSAL = TS.FCTIPOSUCURSAL
+                                                                                                                                        AND (CC.FIGRUPOEMPID            =        1
+                                                                                                                                         OR  CC.FIGRUPOEMPID            =        0)
+                                                                    AND CC.FIDIV_NEGOCIOID     !=     8
+                                                                    --AND CC.FIDIV_NEGOCIOID  !=  10  
+                                                                    AND CC.FIENTIDADID         =     13
+                                                                    AND AP.FIAPERTURAS         >=     0;
+
+SELECT *--CC.FICCID, CC.FIENTIDADID, CC.FCNOMBREC
+FROM CECO.TACCOP001_CENTRO_COSTOS CC
+WHERE CC.FICCID IN ( 312001,312013,312014,312021,312022,312023,312031,312035 )
+AND CC.FIENTIDADID = 13;                                                                    
+
+
+COMMIT;
+
+SELECT *
+FROM CECO.TACCOP001_CENTRO_COSTOS CC
+WHERE FIENTIDADID = 13;
+
+SELECT *
+FROM CECO.TACCOP004_DIRECCION
+WHERE FICCID = 312013;    
+
+SELECT *
+FROM DBA_SOURCE
+WHERE UPPER (TEXT) LIKE '%INTO CECO.TACCOP014_SUCC%';
+
+SELECT CC.FICCID,    CC.FIENTIDADID,    CC.FCNOMBRECC,    CC.FDFECHA_APERTURA, CC.FDFECHA_CIERRE,    CC.FIVICEPRESIDENCIAID,    
+        CAST(  CECO.FN1486_CONS_NOMVP(CC.FIVICEPRESIDENCIAID )  AS VARCHAR2(50 BYTE)  )   AS  FCFIVICEPRESIDENCIA
+FROM CECO.TACCOP001_CENTRO_COSTOS CC
+WHERE CC.FIENTIDADID = 13;         
+
+SELECT *
+FROM CECO.TACCOP014_SUCC
+WHERE FICCID = 312013;
+
+SELECT *
+FROM CECO.TACCES003_ESTRUCTURA
+WHERE FICCID_HIJO = 312013;
+
+SELECT   CC.FICCID,                                                                         
+                    CC.FIENTIDADID,                                                                    
+                    CAST(CECO.FN1493_CONS_NOMENTIDAD (CC.FIENTIDADID) AS VARCHAR2 (100))                            AS FCENTIDAD,
+                    CC.FCNOMBRECC                                                                     AS FCNOMBRECC,
+                    CAST(CECO.FN1463_CONS_NOMRESP (CC.FIRESPONSABLEID) AS VARCHAR2 (60))                            AS FCRESPONSABLE,
+                    ES.FIENTIDADID_PADRE                                                              AS FIENT_PADRE_OP,
+                    ES.FICCID_PADRE                                                                   AS FICCID_PADRE_OP,
+                    DECODE (PA.FIPAISID,  7, 'PAB',  8, 'SVC',  PA.FCMONEDA)                                  AS FCMONEDA,
+                   AR.FCARF_DESCRIP                                                                  AS FCNATURCECO,
+                    CAST(CECO.FN1486_CONS_NOMVP (CC.FIVICEPRESIDENCIAID) AS VARCHAR2 (100))                        AS FCVICEPRESIDENCIA,
+                    CAST(CECO.FN1532_CONS_CLSNSAPXCC (CC.FICCID, CC.FIENTIDADID) AS VARCHAR2 (1))            AS FCCLASE,
+                           CC.FISTATUSCCID                                                            AS FISTATUSCCID,
+                           CAST(CECO.FN1485_CONS_NOMSTATUS (CC.FISTATUSCCID) AS VARCHAR2 (15))                AS FCSTATUSCC,
+                           CC.FICANALID                                                               AS FICANALID,
+                          CAST(CECO.FN1484_CONS_NOMCANAL (CC.FICANALID) AS VARCHAR2 (50))                            AS FCCANAL
+           FROM CECO.TACCOP001_CENTRO_COSTOS CC
+           INNER JOIN CECO.TACCES003_ESTRUCTURA ES        ON     (        CC.FICCID                           = ES.FICCID_HIJO
+                                                              AND CC.FIENTIDADID                     = ES.FIENTIDADID_HIJO
+                                                              AND ES.FIENTIDADID                     = 0
+                                                              AND ES.FITIPO_ESTRUCTURAID     = 129
+                                                              )        
+           LEFT JOIN CECO.TACCOP014_SUCC SUC              ON (
+                                                                  SUC.FICCID = CC.FICCID
+                                                              AND SUC.FIENTIDADID = CC.FIENTIDADID
+                                                              )    
+           LEFT JOIN CECO.TACSUCC02_ARFUN AR              ON AR.FIARF_ID = SUC.FIARF_ID
+           INNER JOIN CECO.TACCOP004_DIRECCION DI         ON     (        DI.FICCID = CC.FICCID
+                                                              AND DI.FIENTIDADID = CC.FIENTIDADID
+                                                              )
+          INNER JOIN CECO.TACCZO001_PAIS PA              ON DI.FIPAISID = PA.FIPAISID
+          WHERE CC.FIGRUPOEMPID        = 1
+          AND     CC.FIDIV_NEGOCIOID     = 10
+          AND     CC.FIENTIDADID             = 13
+          AND     CC.FICCID = 312013
+          ORDER BY CC.FICCID;
+
+SELECT   CC.FICCID,                                                                         
+              CC.FIENTIDADID                                                  
+FROM CECO.TACCOP001_CENTRO_COSTOS CC
+  
+INNER JOIN CECO.TACCES003_ESTRUCTURA ES        ON     (        CC.FICCID                           = ES.FICCID_HIJO
+AND CC.FIENTIDADID                     = ES.FIENTIDADID_HIJO
+AND ES.FIENTIDADID                     = 0
+AND ES.FITIPO_ESTRUCTURAID     = 129)  
+
+WHERE CC.FICCID = 312013  ;
+
+SELECT USERNAME, PROFILE
+FROM DBA_USERS
+WHERE USERNAME = 'USRWEB';
+
+SELECT *
+FROM CECO.TACCNE26_TOTALPLAY;

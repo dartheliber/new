@@ -1,0 +1,2 @@
+ALTER PACKAGE CECO.nombre_del_package COMPILE BODY;
+ALTER PROCEDURE CECO.nombre_del_sp COMPILE; 
